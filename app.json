@@ -15,23 +15,34 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.careconnect.app"
+      "bundleIdentifier": "com.forgenew.careconnect",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#3B82F6"
       },
-      "package": "com.careconnect.app",
+      "package": "com.forgenew.careconnect",
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro"
     },
     "plugins": [
-      ["expo-router", { "root": "./src/app" }],
+      [
+        "expo-router",
+        {
+          "root": "./src/app"
+        }
+      ],
       "expo-font",
       "expo-web-browser",
       "expo-sqlite",
@@ -51,10 +62,19 @@
       [
         "@stripe/stripe-react-native",
         {
-          "merchantIdentifier": "merchant.com.careconnect.app",
+          "merchantIdentifier": "merchant.com.forgenew.careconnect",
           "enableGooglePay": true
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {
+        "root": "./src/app"
+      },
+      "eas": {
+        "projectId": "4f4b8e30-5d21-4709-bf00-768a678f8b72"
+      }
+    },
+    "owner": "msutyak"
   }
 }
