@@ -19,18 +19,6 @@ CREATE POLICY "Recipients can view own record"
   TO authenticated
   USING (profile_id = auth.uid());
 
-CREATE POLICY "Caregivers can view their patients"
-  ON care_recipients FOR SELECT
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM bookings b
-      JOIN caregivers c ON c.id = b.caregiver_id
-      WHERE b.recipient_id = care_recipients.id
-      AND c.profile_id = auth.uid()
-    )
-  );
-
 CREATE POLICY "Recipients can update own record"
   ON care_recipients FOR UPDATE
   TO authenticated
@@ -56,7 +44,7 @@ BEGIN
   END IF;
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_recipient_profile_created
   AFTER INSERT ON profiles

@@ -36,17 +36,17 @@ CREATE POLICY "Users can insert own profile"
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO profiles (id, role, first_name, last_name, email)
+  INSERT INTO public.profiles (id, role, first_name, last_name, email)
   VALUES (
     NEW.id,
-    COALESCE((NEW.raw_user_meta_data->>'role')::user_role, 'recipient'),
+    COALESCE((NEW.raw_user_meta_data->>'role')::public.user_role, 'recipient'::public.user_role),
     COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
     COALESCE(NEW.raw_user_meta_data->>'last_name', ''),
-    NEW.email
+    COALESCE(NEW.email, '')
   );
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users

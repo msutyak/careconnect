@@ -50,6 +50,12 @@ export default function RegisterScreen() {
 
     try {
       await signUp(email, password, firstName, lastName, role);
+      // Navigate to onboarding after successful signup
+      if (role === 'caregiver') {
+        router.replace('/(auth)/onboarding/caregiver-step1');
+      } else {
+        router.replace('/(auth)/onboarding/recipient-step1');
+      }
     } catch (error) {
       setGeneralError(handleError(error, 'Failed to create account'));
     }

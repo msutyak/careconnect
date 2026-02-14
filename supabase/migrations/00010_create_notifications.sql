@@ -24,7 +24,7 @@ CREATE POLICY "Users can update own notifications"
 CREATE POLICY "Service role can insert notifications"
   ON notifications FOR INSERT
   TO service_role
-  USING (true);
+  WITH CHECK (true);
 
 CREATE POLICY "Authenticated users can insert notifications"
   ON notifications FOR INSERT

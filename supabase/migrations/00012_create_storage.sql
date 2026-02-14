@@ -1,5 +1,6 @@
 -- Create storage bucket for avatars
-INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('avatars', 'avatars', true)
+ON CONFLICT (id) DO NOTHING;
 
 -- Allow authenticated users to upload avatars
 CREATE POLICY "Users can upload avatars"
@@ -20,7 +21,8 @@ CREATE POLICY "Public can view avatars"
   USING (bucket_id = 'avatars');
 
 -- Create storage bucket for message images
-INSERT INTO storage.buckets (id, name, public) VALUES ('message-images', 'message-images', true);
+INSERT INTO storage.buckets (id, name, public) VALUES ('message-images', 'message-images', true)
+ON CONFLICT (id) DO NOTHING;
 
 CREATE POLICY "Users can upload message images"
   ON storage.objects FOR INSERT

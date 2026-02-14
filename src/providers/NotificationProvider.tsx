@@ -63,27 +63,37 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           .update({ push_token: token })
           .eq('id', user.id);
       }
+    }).catch(() => {
+      // Notifications not supported (e.g. Expo Go)
     });
 
-    notificationListener.current =
-      Notifications.addNotificationReceivedListener((_notification) => {
-        // Handle foreground notification
-      });
+    try {
+      notificationListener.current =
+        Notifications.addNotificationReceivedListener((_notification) => {
+          // Handle foreground notification
+        });
 
-    responseListener.current =
-      Notifications.addNotificationResponseReceivedListener((response) => {
-        const data = response.notification.request.content.data;
-        if (data?.screen) {
-          router.push(data.screen as string);
-        }
-      });
+      responseListener.current =
+        Notifications.addNotificationResponseReceivedListener((response) => {
+          const data = response.notification.request.content.data;
+          if (data?.screen) {
+            router.push(data.screen as string);
+          }
+        });
+    } catch {
+      // Notifications not fully supported in Expo Go
+    }
 
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
-      }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+      try {
+        if (notificationListener.current) {
+          notificationListener.current.remove();
+        }
+        if (responseListener.current) {
+          responseListener.current.remove();
+        }
+      } catch {
+        // Cleanup not available
       }
     };
   }, [user]);

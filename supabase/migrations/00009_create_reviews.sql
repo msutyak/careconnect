@@ -17,17 +17,23 @@ CREATE POLICY "Anyone can view reviews"
   TO authenticated
   USING (true);
 
+CREATE OR REPLACE FUNCTION public.can_review_booking(p_booking_id UUID)
+RETURNS BOOLEAN AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.bookings b
+    JOIN public.care_recipients cr ON cr.id = b.recipient_id
+    WHERE b.id = p_booking_id
+    AND cr.profile_id = auth.uid()
+    AND b.status = 'completed'
+  );
+$$ LANGUAGE sql SECURITY DEFINER STABLE SET search_path = public;
+
 CREATE POLICY "Reviewers can create reviews"
   ON reviews FOR INSERT
   TO authenticated
   WITH CHECK (
     reviewer_id = auth.uid()
-    AND booking_id IN (
-      SELECT b.id FROM bookings b
-      JOIN care_recipients cr ON cr.id = b.recipient_id
-      WHERE cr.profile_id = auth.uid()
-      AND b.status = 'completed'
-    )
+    AND public.can_review_booking(booking_id)
   );
 
 CREATE POLICY "Caregivers can respond to reviews"

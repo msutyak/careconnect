@@ -44,7 +44,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signUp: async (email, password, firstName, lastName, role) => {
     set({ isLoading: true });
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -56,6 +56,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         },
       });
       if (error) throw error;
+      if (data.session) {
+        set({ session: data.session, user: data.session.user });
+      }
     } finally {
       set({ isLoading: false });
     }
@@ -67,6 +70,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       set({ session: null, user: null, profile: null });
+      const { router } = require('expo-router');
+      router.replace('/(auth)/welcome');
     } finally {
       set({ isLoading: false });
     }
