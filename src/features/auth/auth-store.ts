@@ -34,8 +34,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signIn: async (email, password) => {
     set({ isLoading: true });
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      if (data.session) {
+        set({ session: data.session, user: data.session.user });
+        // Fetch profile and navigate
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.session.user.id)
+          .single();
+        if (profile) {
+          set({ profile: profile as Profile });
+        }
+        const { router } = require('expo-router');
+        if (!profile || !profile.onboarding_completed) {
+          if (profile?.role === 'caregiver') {
+            router.replace('/(auth)/onboarding/caregiver-step1');
+          } else {
+            router.replace('/(auth)/onboarding/recipient-step1');
+          }
+        } else if (profile.role === 'caregiver') {
+          router.replace('/(caregiver)/dashboard');
+        } else {
+          router.replace('/(recipient)/home');
+        }
+      }
     } finally {
       set({ isLoading: false });
     }
