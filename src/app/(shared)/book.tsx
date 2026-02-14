@@ -32,7 +32,6 @@ export default function BookingScreen() {
   const queryClient = useQueryClient();
 
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<AvailabilitySlot | null>(null);
   const [notes, setNotes] = useState('');
 
   const { data: caregiver } = useQuery({
@@ -93,22 +92,28 @@ export default function BookingScreen() {
     return dates;
   }, [slots]);
 
-  // Get slots for selected date
-  const availableSlots = useMemo(() => {
+  // Break availability windows into 1-hour bookable slots
+  const hourlySlots = useMemo(() => {
     if (!selectedDate || !slots) return [];
     const dayName = format(selectedDate, 'EEEE').toLowerCase() as DayOfWeek;
-    return slots.filter(s => s.day_of_week === dayName);
+    const daySlots = slots.filter(s => s.day_of_week === dayName);
+    const hourly: { start_time: string; end_time: string; parentId: string }[] = [];
+    for (const slot of daySlots) {
+      const [sh, sm] = slot.start_time.split(':').map(Number);
+      const [eh] = slot.end_time.split(':').map(Number);
+      for (let h = sh; h < eh; h++) {
+        const start = `${String(h).padStart(2, '0')}:${String(sm).padStart(2, '0')}:00`;
+        const end = `${String(h + 1).padStart(2, '0')}:${String(sm).padStart(2, '0')}:00`;
+        hourly.push({ start_time: start, end_time: end, parentId: slot.id });
+      }
+    }
+    return hourly;
   }, [selectedDate, slots]);
 
-  // Calculate pricing
-  const calculateHours = () => {
-    if (!selectedSlot) return 0;
-    const [sh, sm] = selectedSlot.start_time.split(':').map(Number);
-    const [eh, em] = selectedSlot.end_time.split(':').map(Number);
-    return (eh + em / 60) - (sh + sm / 60);
-  };
+  const [selectedHourSlot, setSelectedHourSlot] = useState<{ start_time: string; end_time: string } | null>(null);
 
-  const hours = calculateHours();
+  // Calculate pricing (always 1 hour per slot)
+  const hours = selectedHourSlot ? 1 : 0;
   const totalCents = Math.round(hours * (caregiver?.hourly_rate_cents || 0));
   const platformFeeCents = Math.round(totalCents * PLATFORM_FEE_PERCENT);
   const caregiverAmountCents = totalCents - platformFeeCents;
@@ -121,8 +126,8 @@ export default function BookingScreen() {
           recipient_id: recipient!.id,
           caregiver_id: caregiverId!,
           date: format(selectedDate!, 'yyyy-MM-dd'),
-          start_time: selectedSlot!.start_time,
-          end_time: selectedSlot!.end_time,
+          start_time: selectedHourSlot!.start_time,
+          end_time: selectedHourSlot!.end_time,
           total_amount_cents: totalCents,
           platform_fee_cents: platformFeeCents,
           caregiver_amount_cents: caregiverAmountCents,
@@ -194,7 +199,7 @@ export default function BookingScreen() {
                   ]}
                   onPress={() => {
                     setSelectedDate(date);
-                    setSelectedSlot(null);
+                    setSelectedHourSlot(null);
                   }}
                 >
                   <Text style={[styles.dateDayText, { color: isSelected ? colors.white : theme.textSecondary }]}>
@@ -218,11 +223,11 @@ export default function BookingScreen() {
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Select Time</Text>
           <View style={styles.slotGrid}>
-            {availableSlots.map((slot) => {
-              const isSelected = selectedSlot?.id === slot.id;
+            {hourlySlots.map((slot) => {
+              const isSelected = selectedHourSlot?.start_time === slot.start_time;
               return (
                 <TouchableOpacity
-                  key={slot.id}
+                  key={slot.start_time}
                   style={[
                     styles.slotChip,
                     {
@@ -230,7 +235,7 @@ export default function BookingScreen() {
                       borderColor: isSelected ? colors.primary[500] : theme.border,
                     },
                   ]}
-                  onPress={() => setSelectedSlot(slot)}
+                  onPress={() => setSelectedHourSlot(slot)}
                 >
                   <Text style={[styles.slotText, { color: isSelected ? colors.primary[700] : theme.text }]}>
                     {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
@@ -243,7 +248,7 @@ export default function BookingScreen() {
       )}
 
       {/* Booking Summary */}
-      {selectedDate && selectedSlot && (
+      {selectedDate && selectedHourSlot && (
         <Card variant="outlined" style={styles.summaryCard}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Booking Summary</Text>
           <View style={styles.summaryLine}>
@@ -253,12 +258,12 @@ export default function BookingScreen() {
           <View style={styles.summaryLine}>
             <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Time</Text>
             <Text style={[styles.summaryValue, { color: theme.text }]}>
-              {formatTime(selectedSlot.start_time)} - {formatTime(selectedSlot.end_time)}
+              {formatTime(selectedHourSlot.start_time)} - {formatTime(selectedHourSlot.end_time)}
             </Text>
           </View>
           <View style={styles.summaryLine}>
             <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Duration</Text>
-            <Text style={[styles.summaryValue, { color: theme.text }]}>{hours.toFixed(1)} hours</Text>
+            <Text style={[styles.summaryValue, { color: theme.text }]}>1 hour</Text>
           </View>
           <View style={[styles.summaryLine, { borderTopWidth: 1, borderTopColor: theme.borderLight, paddingTop: spacing.sm, marginTop: spacing.sm }]}>
             <Text style={[styles.summaryLabel, { color: theme.text, fontFamily: fontFamily.semibold }]}>Total</Text>
@@ -274,7 +279,7 @@ export default function BookingScreen() {
         <Button
           title="Request Booking"
           onPress={() => createBooking.mutate()}
-          disabled={!selectedDate || !selectedSlot}
+          disabled={!selectedDate || !selectedHourSlot}
           loading={createBooking.isPending}
         />
       </View>
